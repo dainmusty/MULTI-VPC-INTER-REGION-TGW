@@ -324,3 +324,19 @@ Terraform Apply job pauses.
 GitHub shows “Waiting for approval in environment: production”.
 
 Reviewer approves → job continues.
+
+MULTI-VPC-INTER-REGION-TGW/
+├── .github/workflows/
+│   └── terraform-pipeline.yml
+├── env/
+│   └── dev/
+│       ├── main.tf
+│       └── variables.tf
+├── modules/
+│   └── vpc/
+│   └── tgw/
+├── sonar-project.properties   <-- place it here
+└── .gitignore
+
+# put this in sonar-project.properties to ing
+# 
