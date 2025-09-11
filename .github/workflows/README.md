@@ -338,5 +338,33 @@ MULTI-VPC-INTER-REGION-TGW/
 ├── sonar-project.properties   <-- place it here
 └── .gitignore
 
-# put this in sonar-project.properties to ing
+# put this in sonar-project.properties to ingnore deprecated resources
+# Ignore the "S3 bucket missing ACL/logging" rule
+sonar.issue.ignore.multicriteria=e1
+sonar.issue.ignore.multicriteria.e1.ruleKey=terraform:S3_LOGGING_ACL
+sonar.issue.ignore.multicriteria.e1.resourceKey=**/*.tf
+
+# Ignore wildcard Resource issue (logs:CreateLogGroup etc.)
+sonar.issue.ignore.multicriteria+=e2
+sonar.issue.ignore.multicriteria.e2.ruleKey=terraform:WILDCARD_RESOURCE
+sonar.issue.ignore.multicriteria.e2.resourceKey=**/*.tf
+
+# or adjust the workflow to incluse sonar ignore of some deprecated resources
+- name: SonarCloud Scan
+  env:
+    SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+  run: |
+    sonar-scanner \
+      -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+      -Dsonar.organization=${SONAR_ORGANIZATION} \
+      -Dsonar.branch.name=${GITHUB_REF_NAME} \
+      -Dsonar.sources=. \
+      -Dsonar.host.url=https://sonarcloud.io \
+      -Dsonar.login=$SONAR_TOKEN \
+      -Dsonar.issue.ignore.multicriteria=e1,e2 \
+      -Dsonar.issue.ignore.multicriteria.e1.ruleKey=terraform:S3_LOGGING_ACL \
+      -Dsonar.issue.ignore.multicriteria.e1.resourceKey=**/*.tf \
+      -Dsonar.issue.ignore.multicriteria.e2.ruleKey=terraform:WILDCARD_RESOURCE \
+      -Dsonar.issue.ignore.multicriteria.e2.resourceKey=**/*.tf
+
 # 
