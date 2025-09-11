@@ -114,6 +114,7 @@ module "iam" {
   source = "../../modules/iam"
   env = "dev"
   company_name = "tankofm"
+  log_bucket_name = module.s3.log_bucket_name
   
 }
 

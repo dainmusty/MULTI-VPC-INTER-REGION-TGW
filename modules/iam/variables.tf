@@ -11,6 +11,12 @@ variable "company_name" {
   
 }
 
+variable "log_bucket_name" {
+  description = "Bucket name"
+  type = string
+}
+
+
 
 
 # 

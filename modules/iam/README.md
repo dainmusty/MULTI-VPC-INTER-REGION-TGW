@@ -165,3 +165,112 @@ resource "aws_iam_role_policy_attachment" "alb_controller_attach" {
   policy_arn = aws_iam_policy.alb_controller_policy.arn
   role       = aws_iam_role.alb_controller_irsa.name
 }
+
+
+why is this repeated
+"arn:aws:s3:::${var.log_bucket_name}",
+          "arn:aws:s3:::${var.log_bucket_name}/*"
+ChatGPT said:
+
+Good catch 👌 — that’s not a mistake, it’s intentional.
+
+Here’s why you see both:
+
+arn:aws:s3:::${var.log_bucket_name} → refers to the bucket itself (needed for actions like s3:GetBucketAcl, s3:GetBucketPolicy).
+
+arn:aws:s3:::${var.log_bucket_name}/* → refers to all objects inside the bucket (needed for s3:PutObject).
+
+🔎 Example:
+
+If you only had the bucket ARN → AWS would let you read bucket properties, but you couldn’t put objects inside it.
+
+If you only had the object ARN → AWS would let you interact with objects, but you couldn’t query ACLs or bucket-level settings.
+
+That’s why AWS best practice is to include both when you’re mixing bucket-level and object-level permissions.
+
+# More permission boundaries
+
+#       ,
+#       {
+#         Sid    = "AllowEKSManagement",
+#         Effect = "Allow",
+#         Action = [
+#           "eks:DescribeCluster",
+#           "eks:ListClusters",
+#           "eks:UpdateClusterConfig"
+#         ],
+#         Resource = "arn:aws:eks:${var.region}:${var.account_id}:cluster/*"
+#       },
+#       {
+#         Sid    = "AllowEC2Networking",
+#         Effect = "Allow",
+#         Action = [
+#           "ec2:Describe*",
+#           "ec2:CreateTags",
+#           "ec2:DeleteTags"
+#         ],
+#         Resource = "*"
+#       },
+#       {
+#         Sid    = "AllowRDSManagement",
+#         Effect = "Allow",
+#         Action = [
+#           "rds:Describe*"
+#         ],
+#         Resource = "arn:aws:rds:${var.region}:${var.account_id}:db:*"
+#       },
+#       {
+#         Sid    = "AllowConfigRead",
+#         Effect = "Allow",
+#         Action = [
+#           "config:Describe*",
+#           "config:Get*",
+#           "config:List*"
+#         ],
+#         Resource = "*"
+#       }
+#     ]
+#   })
+# }
+
+# policy allows VPC Flow Logs → CloudWatch:
+
+resource "aws_iam_role_policy" "vpc_flow_logs" {
+  name = "vpc-flow-logs-policy"
+  role = aws_iam_role.vpc_flow_logs.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:DescribeLogGroups",
+          "logs:DescribeLogStreams"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+
+3. Do all future roles need the boundary?
+
+👉 Not necessarily.
+It depends on your organization’s governance/security model:
+
+Strict environments (enterprise / regulated) → Yes, every IAM role must use the permission boundary (set at org level via SCP or Terraform).
+
+Flexible/dev environments → You can apply boundaries selectively (e.g., only for logging/infra roles).
+
+In your case, since you’re only deploying VPCs, TGWs, and logs, you don’t need a boundary for all roles yet. You can introduce it gradually.
+
+✅ Recommendation:
+
+Start with the vpc_flow_logs role using the permission boundary.
+
+Later, when you add app/service roles, decide whether to enforce boundaries org-wide.

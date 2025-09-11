@@ -1,13 +1,14 @@
 # Creates the S3 Bucket for logging
 resource "aws_s3_bucket" "log_bucket" {
   bucket = var.log_bucket_name
-
+  
   tags = {
     Name        = "${var.ResourcePrefix}-s3-log-bucket"
 
   }
 }
 
+# Enable Versioning
 resource "aws_s3_bucket_versioning" "versioning_log_bucket" {
   bucket = aws_s3_bucket.log_bucket.id
   versioning_configuration {
@@ -15,15 +16,12 @@ resource "aws_s3_bucket_versioning" "versioning_log_bucket" {
   }
 }
 
+# Enable Server Access Logging on the log bucket itself (self-logging)
+resource "aws_s3_bucket_logging" "log_bucket_logging" {
+  bucket = aws_s3_bucket.log_bucket.id
 
-# Block public access
-# Enable Block Public Access
-resource "aws_s3_bucket_public_access_block" "block_public_access" {
-  bucket                  = aws_s3_bucket.log_bucket.id
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
+  target_bucket = aws_s3_bucket.log_bucket.id
+  target_prefix = "s3-access-logs/"
 }
 
 
@@ -35,21 +33,42 @@ resource "aws_s3_bucket_acl" "log_bucket_acl" {
 }
 
 
-# HTTPS only policy and Log delivery policy (scoped to this bucket only)
-# Creates Bucket Policy to enforce HTTPS only access and to allow AWS Log Delivery Service to write logs to the bucket
-resource "aws_s3_bucket_policy" "log_bucket_policy" {
+# Block all public access
+resource "aws_s3_bucket_public_access_block" "log_bucket" {
   bucket = aws_s3_bucket.log_bucket.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# Default encryption (AES256)
+resource "aws_s3_bucket_server_side_encryption_configuration" "log_bucket" {
+  bucket = aws_s3_bucket.log_bucket.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+      # kms_master_key_id = var.kms_key_arn   # uncomment if using KMS
+    }
+  }
+}
+
+# Enforce HTTPS-only access
+resource "aws_s3_bucket_policy" "https_only" {
+  bucket = aws_s3_bucket.log_bucket.id
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
-      # Enforce HTTPS-only
       {
-        Sid       = "HTTPSOnly"
-        Effect    = "Deny"
+        Sid      = "DenyInsecureTransport"
+        Effect   = "Deny"
         Principal = "*"
-        Action    = "s3:*"
-        Resource  = [
-          aws_s3_bucket.log_bucket.arn,
+        Action   = "s3:*"
+        Resource = [
+          "${aws_s3_bucket.log_bucket.arn}",
           "${aws_s3_bucket.log_bucket.arn}/*"
         ]
         Condition = {
@@ -57,27 +76,10 @@ resource "aws_s3_bucket_policy" "log_bucket_policy" {
             "aws:SecureTransport" = "false"
           }
         }
-      },
-
-      # Allow AWS log delivery
-      {
-        Sid       = "AWSLogDeliveryWrite"
-        Effect    = "Allow"
-        Principal = {
-          Service = "delivery.logs.amazonaws.com"
-        }
-        Action   = "s3:PutObject"
-        Resource = "${aws_s3_bucket.log_bucket.arn}/*"
-        Condition = {
-          StringEquals = {
-            "s3:x-amz-acl" = "bucket-owner-full-control"
-          }
-        }
       }
     ]
   })
 }
-
 
 
 
