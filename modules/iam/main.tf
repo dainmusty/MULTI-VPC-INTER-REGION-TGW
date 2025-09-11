@@ -63,7 +63,10 @@ resource "aws_iam_role" "vpc_flow_logs" {
 
 
 # IAM Policy for VPC Flow Logs
-# sonarignore: CLOUDFORMATION_WILDCARD_RESOURCE
+data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}
+
+
 resource "aws_iam_role_policy" "vpc_flow_logs_policy" {
   name = "vpc-flow-logs-policy"
   role = aws_iam_role.vpc_flow_logs.id
@@ -72,20 +75,24 @@ resource "aws_iam_role_policy" "vpc_flow_logs_policy" {
     Version = "2012-10-17",
     Statement = [
       {
-        Effect   = "Allow",
-        Action   = [
-          "s3:PutObject",
-          "s3:GetBucketLocation",
-          "s3:ListBucket",
-          "logs:CreateLogGroup",
-          "logs:CreateLogStream",
-          "logs:PutLogEvents"
+        Effect = "Allow",
+        Action = [
+          "s3:PutObject"
         ],
-        Resource = "*"
+        Resource = "arn:aws:s3:::${var.log_bucket_name}/AWSLogs/${data.aws_caller_identity.current.account_id}/*"
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "s3:GetBucketLocation",
+          "s3:ListBucket"
+        ],
+        Resource = "arn:aws:s3:::${var.log_bucket_name}"
       }
     ]
   })
 }
+
 
 
 # # --- Admin Role ---

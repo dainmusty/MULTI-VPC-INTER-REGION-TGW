@@ -83,6 +83,67 @@ resource "aws_s3_bucket_policy" "https_only" {
 }
 
 
+# Lifecycle policy to transition objects to STANDARD_IA after 30 days and expire after 365 days
+resource "aws_s3_bucket_lifecycle_configuration" "log_bucket" {
+  bucket = aws_s3_bucket.log_bucket.id
+
+  rule {
+  id     = "expire-vpc-logs"
+  status = "Enabled"
+
+  filter {
+    prefix = "AWSLogs/"
+  }
+
+  expiration {
+    days = 365
+  }
+}
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

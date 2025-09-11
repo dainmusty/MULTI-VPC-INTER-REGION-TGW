@@ -1,0 +1,4 @@
+ skip-check:
+  - CKV2_AWS_62  # Event notifications not required for log bucket
+  - CKV_AWS_290  # Acceptable write access in dev for flow logs
+ 

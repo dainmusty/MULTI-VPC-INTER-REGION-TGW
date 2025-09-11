@@ -119,3 +119,65 @@ Then keep aws_s3_bucket_policy inside the s3/ module alongside aws_s3_bucket.
 
 
 Do you prefer I restructure your log bucket code into a small re-usable module (for flow logs, ELB logs, CloudTrail logs, etc.), or keep it inline inside your vpc module?
+
+
+Warning: Invalid Attribute Combination
+│
+│   with module.s3.aws_s3_bucket_lifecycle_configuration.log_bucket,
+│   on ..\..\modules\s3\main.tf line 87, in resource "aws_s3_bucket_lifecycle_configuration" "log_bucket":
+│   87: resource "aws_s3_bucket_lifecycle_configuration" "log_bucket" {
+│
+│ No attribute specified when one (and only one) of [rule[0].filter,rule[0].prefix] is required
+│
+│ This will be an error in a future version of the provider
+│
+│ (and one more similar warning elsewhere)
+ChatGPT said:
+
+Ah, I see what’s happening 👍
+
+When you define an aws_s3_bucket_lifecycle_configuration, each rule must include exactly one of these:
+
+filter (preferred, flexible way)
+
+prefix (older, now deprecated)
+
+If neither is set, Terraform warns because AWS requires you to define which objects the lifecycle rule applies to.
+
+✅ Fix: Apply lifecycle rule to all objects
+
+If you want lifecycle rules to apply to everything in the bucket (common for log buckets), you add an empty filter block:
+
+resource "aws_s3_bucket_lifecycle_configuration" "log_bucket" {
+  bucket = aws_s3_bucket.log_bucket.id
+
+  rule {
+    id     = "expire-logs"
+    status = "Enabled"
+
+    filter {} # applies to ALL objects
+
+    expiration {
+      days = 365
+    }
+  }
+}
+
+⚡ Alternative (if you only want to target logs under a prefix like AWSLogs/)
+rule {
+  id     = "expire-vpc-logs"
+  status = "Enabled"
+
+  filter {
+    prefix = "AWSLogs/"
+  }
+
+  expiration {
+    days = 365
+  }
+}
+
+
+👉 Since this is an S3 log bucket for VPC Flow Logs, best practice is to use the prefix = "AWSLogs/" filter, because that’s where AWS Flow Logs write their objects.
+
+Would you like me to rewrite the lifecycle rule with two rules:

@@ -367,4 +367,41 @@ sonar.issue.ignore.multicriteria.e2.resourceKey=**/*.tf
       -Dsonar.issue.ignore.multicriteria.e2.ruleKey=terraform:WILDCARD_RESOURCE \
       -Dsonar.issue.ignore.multicriteria.e2.resourceKey=**/*.tf
 
-# 
+# Double scanner is on, comes with errors, see below
+Got it 👍 — that error means SonarCloud is trying to scan twice:
+
+Automatic Analysis (enabled by default in SonarCloud UI).
+
+Your GitHub Actions scanner job (the one you wrote in your workflow).
+
+SonarCloud doesn’t allow both at the same time, so it fails with:
+
+ERROR: You are running CI analysis while Automatic Analysis is enabled. 
+Please consider disabling one or the other.
+
+✅ Fix
+
+Since you want full control in GitHub Actions (with security scans + PR gating), the best approach is:
+
+Disable Automatic Analysis in SonarCloud:
+
+Go to SonarCloud
+.
+
+Open your project → Administration → Analysis Method.
+
+Turn off Automatic Analysis.
+
+Save.
+
+Now only the workflow’s sonar-scanner will run, and this error goes away.
+
+🔄 Alternative (if you don’t want to disable Auto Analysis)
+
+Remove the sonarcloud job from your workflow, and let SonarCloud’s automatic analysis run on every push.
+
+Downside: you lose the ability to make scans part of your CI/CD gating logic (e.g., needs: sonarcloud).
+
+👉 Since you already integrated Sonar into your CI/CD pipeline, I recommend disabling Automatic Analysis in SonarCloud UI and keeping your workflow-based scanner.
+
+Do you want me to also tweak your workflow so Sonar runs only on pull requests, not on feature-branch pushes? That way you don’t get extra noise during early dev.
