@@ -84,7 +84,7 @@ resource "aws_s3_bucket_policy" "https_only" {
 
 
 # Lifecycle policy to transition objects to STANDARD_IA after 30 days and expire after 365 days
-resource "aws_s3_bucket_lifecycle_configuration" "life_config_log_bucket" {
+resource "aws_s3_bucket_lifecycle_configuration" "log_bucket" {
   bucket = aws_s3_bucket.log_bucket.id
 
   # Rule 1: Expire logs after 365 days
@@ -106,12 +106,13 @@ resource "aws_s3_bucket_lifecycle_configuration" "life_config_log_bucket" {
     id     = "abort-incomplete-uploads"
     status = "Enabled"
 
-    filter {} # required by provider if no prefix
+    filter {} # required if no prefix or tags
     abort_incomplete_multipart_upload {
       days_after_initiation = 7
     }
   }
 }
+
 
 
 
