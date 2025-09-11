@@ -171,3 +171,59 @@ resource "aws_route_table_association" "private_assoc" {
   subnet_id      = each.value.id
   route_table_id = aws_route_table.private_rtbl[split("-", each.key)[0]].id
 }
+
+
+# ----------------------------------------
+# VPC Flow Logs (Optional)
+# ----------------------------------------
+
+resource "aws_flow_log" "vpc_flow_logs" {
+  for_each = { for k, v in var.vpcs : k => v if v.enable_flow_logs }
+
+  log_destination      = each.value.flow_logs_destination_arn
+  log_destination_type = each.value.flow_logs_destination_type
+  traffic_type         = each.value.flow_logs_traffic_type
+  vpc_id               = aws_vpc.vpc[each.key].id
+
+  iam_role_arn = each.value.flow_logs_destination_type == "cloud-watch-logs" ? each.value.vpc_flow_log_iam_role_arn : null
+
+  tags = merge(
+    var.tags,
+    {
+      Name = "${var.tags.Env}-${each.key}-vpc-flow-logs"
+    }
+  )
+}
+
+
+# CloudWatch Log Group for VPC Flow Logs
+# resource "aws_cloudwatch_log_group" "vpc_flow_logs" {
+#   name              = "/aws/vpc/flow-logs"
+#   retention_in_days = 30
+# }
+
+
+# Default Security Group
+resource "aws_default_security_group" "restrict_default" {
+  for_each = aws_vpc.vpc
+
+  vpc_id = each.value.id
+
+  ingress = []
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = merge(
+    var.tags,
+    {
+      Name = "${var.env}-${each.key}-default-sg-restricted"
+    }
+  )
+}
+
+
+

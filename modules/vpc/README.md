@@ -345,3 +345,56 @@ resource "aws_route" "private_rt" {
   destination_cidr_block = var.private_rt_destination_cidr_block
   nat_gateway_id         = aws_nat_gateway.ngw[replace(each.key, "-private", "-public")].id
 }
+
+
+Perfect 👌 — since this is just for testing, it’s smarter and cheaper to send your VPC Flow Logs to S3 instead of CloudWatch.
+
+Reasons why:
+
+Cheaper storage → S3 is ~$0.023/GB/month vs CloudWatch ingestion + storage costs.
+
+No ingestion fee → CloudWatch charges per GB ingested, S3 does not.
+
+You already have a bucket → no need to provision extra resources.
+
+The only trade-off is that with S3 you don’t get real-time log querying (like you do with CloudWatch Logs Insights), but for testing that’s fine. If you ever want to analyze the logs, you can run Athena queries directly against the S3 bucket.
+
+
+resource "aws_flow_log" "vpc_flow_log" {
+  iam_role_arn    = var.vpc_flow_log_iam_role_arn
+  log_destination = var.vpc_flow_log_destination
+  traffic_type    = var.traffic_type
+  vpc_id          = aws_vpc.vpc.id
+  
+  
+}
+
+an we make these properties variables?
+ log_destination_type = "s3" # sending to S3 bucket
+  traffic_type         = "ALL"
+ChatGPT said:
+
+Yes 💯 — that’s the best practice. Making them variables keeps your module flexible, so in future you can:
+
+switch between S3 and CloudWatch Logs
+
+choose ALL, ACCEPT, or REJECT traffic
+
+Here’s the updated snippet 👇
+
+modules/vpc/main.tf
+resource "aws_flow_log" "this" {
+  count = var.enable_flow_logs ? 1 : 0
+
+  log_destination      = var.flow_logs_destination_arn
+  log_destination_type = var.flow_logs_destination_type
+  traffic_type         = var.flow_logs_traffic_type
+  vpc_id               = aws_vpc.vpc.id
+
+  tags = merge(
+    var.tags,
+    {
+      Name = "${var.name}-vpc-flow-logs"
+    }
+  )
+}
