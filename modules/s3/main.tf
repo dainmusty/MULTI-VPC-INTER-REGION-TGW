@@ -88,18 +88,19 @@ resource "aws_s3_bucket_lifecycle_configuration" "log_bucket" {
   bucket = aws_s3_bucket.log_bucket.id
 
   rule {
-  id     = "expire-vpc-logs"
-  status = "Enabled"
+    id     = "expire-logs"
+    status = "Enabled"
 
-  filter {
-    prefix = "AWSLogs/"
+    filter { prefix = "AWSLogs/" }
+
+    expiration {
+      days = 365
+    }
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
   }
-
-  expiration {
-    days = 365
-  }
-}
-
 }
 
 

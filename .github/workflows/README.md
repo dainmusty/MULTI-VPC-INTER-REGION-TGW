@@ -405,3 +405,37 @@ Downside: you lose the ability to make scans part of your CI/CD gating logic (e.
 👉 Since you already integrated Sonar into your CI/CD pipeline, I recommend disabling Automatic Analysis in SonarCloud UI and keeping your workflow-based scanner.
 
 Do you want me to also tweak your workflow so Sonar runs only on pull requests, not on feature-branch pushes? That way you don’t get extra noise during early dev.
+
+
+
+That formatting looks good 👍 — Checkov supports a .checkov.yaml or .checkov.yml file with a top-level key skip-check as a list.
+
+Yours is valid YAML ✅, but I’d suggest two small tweaks for best practice:
+
+Keep indentation consistent (2 spaces is the norm).
+
+Align the comments so they’re clean and easier to read.
+
+Here’s the polished version:
+
+skip-check:
+  - CKV2_AWS_62   # Event notifications not required for log bucket
+  - CKV_AWS_290   # Acceptable write access in dev for flow logs
+  - CKV_AWS_145   # Allowing all actions on all resources
+  - CKV_AWS_144   # Cross-region replication not required for dev logs
+  - CKV2_AWS_11   # VPC flow logs are handled dynamically in Terraform
+
+
+💡 Tip: If you want these skips to apply only to Terraform checks, you can scope it with:
+
+framework: terraform
+
+skip-check:
+  - CKV2_AWS_62
+  - CKV_AWS_290
+  - CKV_AWS_145
+  - CKV_AWS_144
+  - CKV2_AWS_11
+
+
+This way, if later you add Docker/Kubernetes scans, the skips won’t “bleed over” into them.
