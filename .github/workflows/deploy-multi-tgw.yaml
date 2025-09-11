@@ -54,10 +54,11 @@ jobs:
       - name: Run Checkov
         uses: bridgecrewio/checkov-action@v12
         with:
-          directory: env/dev
-          framework: terraform
-          quiet: true
-          soft_fail: false
+           directory: env/dev
+           framework: terraform
+           quiet: true
+           soft_fail: false
+           config_file: .checkov.yml   # 👈 reference root-level config
 
   terraform-plan:
     name: Terraform Plan
