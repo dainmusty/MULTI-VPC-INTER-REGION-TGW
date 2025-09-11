@@ -99,58 +99,6 @@ resource "aws_s3_bucket_lifecycle_configuration" "lifecycle_config_log_bucket" {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # # Create the Primary S3 Bucket
 # resource "aws_s3_bucket" "operations_bucket" {
 #   bucket = var.operations_bucket_name

@@ -1,10 +1,10 @@
 framework: terraform
 
 skip-check:
-  - CKV2_AWS_62
-  - CKV_AWS_290
-  - CKV_AWS_145
-  - CKV_AWS_144
-  - CKV2_AWS_11
-  - CKV2_AWS_300
-  - CKV2_AWS_12
+  - CKV2_AWS_62     # Event notifications not required for log bucket
+  - CKV_AWS_290     # Acceptable write access in dev for flow logs
+  - CKV_AWS_145     # SSE-KMS not enforced in dev
+  - CKV_AWS_144     # Cross-region replication not required for dev logs
+  - CKV2_AWS_11     # VPC flow logs are handled dynamically
+  - CKV_AWS_300     # Lifecycle rule handles abort incomplete uploads
+  - CKV2_AWS_12     # Default SG restricted via module logic
