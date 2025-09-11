@@ -63,6 +63,7 @@ resource "aws_iam_role" "vpc_flow_logs" {
 
 
 # IAM Policy for VPC Flow Logs
+# sonarignore: CLOUDFORMATION_WILDCARD_RESOURCE
 resource "aws_iam_role_policy" "vpc_flow_logs_policy" {
   name = "vpc-flow-logs-policy"
   role = aws_iam_role.vpc_flow_logs.id

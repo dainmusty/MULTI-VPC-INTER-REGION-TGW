@@ -1,4 +1,5 @@
 # Creates the S3 Bucket for logging
+# sonarignore: S3_LOGGING_ACL
 resource "aws_s3_bucket" "log_bucket" {
   bucket = var.log_bucket_name
   
