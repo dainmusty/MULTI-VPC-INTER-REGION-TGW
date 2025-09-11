@@ -209,12 +209,25 @@ resource "aws_default_security_group" "restrict_default" {
 
   vpc_id = each.value.id
 
-  ingress = []
+  # Explicitly deny all inbound traffic
+  ingress {
+    protocol    = "-1"
+    from_port   = 0
+    to_port     = 0
+    self        = false
+    cidr_blocks = []
+    ipv6_cidr_blocks = []
+    prefix_list_ids  = []
+    security_groups  = []
+  }
+
+  # Allow all outbound traffic (common default)
   egress {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = ["::/0"]
   }
 
   tags = merge(
@@ -224,6 +237,7 @@ resource "aws_default_security_group" "restrict_default" {
     }
   )
 }
+
 
 
 
