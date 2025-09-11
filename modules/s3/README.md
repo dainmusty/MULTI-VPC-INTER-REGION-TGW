@@ -116,3 +116,6 @@ modules/
   iam/
     main.tf        <-- roles, policies, etc.
 Then keep aws_s3_bucket_policy inside the s3/ module alongside aws_s3_bucket.
+
+
+Do you prefer I restructure your log bucket code into a small re-usable module (for flow logs, ELB logs, CloudTrail logs, etc.), or keep it inline inside your vpc module?
