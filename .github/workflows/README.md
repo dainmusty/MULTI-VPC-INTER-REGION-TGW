@@ -439,3 +439,64 @@ skip-check:
 
 
 This way, if later you add Docker/Kubernetes scans, the skips won’t “bleed over” into them.
+
+
+SonarQube (Code Quality & Security in App Code)
+
+Focus: Application code (Python, Java, Node, etc.).
+
+Catches: Bugs, code smells, duplicated code, unit test coverage, OWASP issues in code.
+
+Weak at: Infrastructure-as-Code (Terraform, CloudFormation, Kubernetes manifests).
+
+
+🔹 Checkov (Security/Compliance in IaC)
+
+Focus: Infrastructure-as-Code security and compliance.
+
+Catches: Misconfigured S3 buckets, permissive IAM, insecure SGs, missing encryption, etc.
+
+Weak at: Business logic, code maintainability, unit tests.
+
+# tips for cicd workflow practices.
+
+🔹 Best Practice
+
+✅ Keep Checkov in the workflow (at least for IaC).
+Even though you now run it locally via VS Code, CI/CD still needs it to:
+
+Block insecure misconfigs from being merged.
+
+Provide consistent security reporting across the team.
+
+Catch issues if someone skips local scanning.
+
+✅ Keep SonarCloud for code quality/security.
+They complement each other (app vs infra).
+
+🔄 Optimize your workflow so it’s not too slow:
+
+You can run Checkov only on changed directories/files (e.g., only run when *.tf changes).
+
+Run SonarCloud on every PR since code always changes.
+
+🔹 Recommended Workflow Setup
+
+Local: Use VS Code Checkov for fast feedback.
+
+CI/CD: Run both:
+
+SonarCloud → app code quality/security.
+
+Checkov → Terraform/K8s/IaC misconfigs.
+
+Branch Policy: PR must pass both before merge.
+
+⚡ TL;DR: Don’t remove Checkov from CI — local scans help you fix earlier, but CI scans enforce team-wide security/compliance.
+✅ This will:
+
+Run SonarCloud always (since code always changes).
+
+Run Checkov + TFLint only if .tf files changed in the commit/PR.
+
+Speed up builds when infra code isn’t touched.
