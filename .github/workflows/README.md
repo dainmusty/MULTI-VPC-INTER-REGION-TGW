@@ -576,3 +576,47 @@ Run SonarCloud always (since code always changes).
 Run Checkov + TFLint only if .tf files changed in the commit/PR.
 
 Speed up builds when infra code isn’t touched.
+
+
+
+
+🔑 id-token: write
+
+Lets the workflow request an OpenID Connect (OIDC) token from GitHub’s identity provider.
+
+You usually need this when you’re setting up federated authentication with a cloud provider (e.g., AWS, Azure, GCP).
+
+Example: instead of storing long-lived AWS keys in secrets, you configure AWS IAM to trust GitHub’s OIDC provider. Then your job can assume a role using id-token: write.
+
+📦 packages: write
+
+Grants permission to publish packages to GitHub Packages (npm, Docker images, Maven, etc.).
+
+Without this, you can still download packages but can’t push new ones.
+
+📂 contents: read
+
+Lets the workflow read repository contents.
+
+This is the bare minimum for most jobs (so actions/checkout can fetch your code).
+
+If you want the workflow to push commits, open PRs, or tag releases, you’d usually need contents: write.
+
+⚡ Typical setup
+
+For Terraform + security scans, you normally don’t need packages: write.
+But if you’re:
+
+Publishing Docker images → you’d need packages: write.
+
+Doing OIDC login to AWS (instead of using stored AWS keys) → you’d need id-token: write.
+
+👉 In your case (Terraform scans + PR auto-creation):
+
+You need contents: write (to create PRs).
+
+You might need id-token: write if you want to switch from AWS secrets to OIDC.
+
+You don’t need packages: write, unless you plan to push artifacts to GitHub Packages.
+
+Do you want me to show you how to replace AWS secrets with OIDC and id-token: write so your workflow runs without storing AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY?

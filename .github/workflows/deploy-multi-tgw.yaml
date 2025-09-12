@@ -1,13 +1,30 @@
-name: Terraform CI/CD Pipeline
+name: Terraform CI/CD
 
 on:
   push:
-    branches-ignore:
-      - main   # run scans only on feature branches
+    branches:
+      - "dev"     # feature branch for testing
   pull_request:
     branches:
-      - main   # run plan on PR to main
-  workflow_dispatch: # manual trigger (destroy, etc.)
+      - "main"    # PRs target main
+  workflow_dispatch:
+    inputs:
+      terraform_action:
+        description: "Select the Terraform action to perform"
+        required: true
+        type: choice
+        options:
+          - "plan"
+          - "apply"
+          - "destroy"
+      skip_nochange:
+        description: "Apply even if no change is reported in the plan"
+        required: false
+        type: boolean
+
+permissions:
+  contents: write
+  pull-requests: write
 
 env:
   TF_VAR_management_account_id: ${{ secrets.AWS_MANAGEMENT_ACCOUNT_ID }}
@@ -17,6 +34,29 @@ env:
   SONAR_ORGANIZATION: effulgencetech
 
 jobs:
+  tflint:
+    name: Run TFLint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install TFLint
+        run: |
+          curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+      - name: Run TFLint
+        run: tflint --recursive
+
+  checkov:
+    name: Run Checkov
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Checkov Scan
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: .
+          quiet: true
+          soft_fail: false
+
   sonarcloud:
     name: Run SonarCloud Code Quality Scan
     runs-on: ubuntu-latest
@@ -32,122 +72,78 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           sonar-scanner \
-            -Dsonar.projectKey=${{ env.SONAR_PROJECT_KEY }} \
-            -Dsonar.organization=${{ env.SONAR_ORGANIZATION }} \
+            -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+            -Dsonar.organization=${SONAR_ORGANIZATION} \
             -Dsonar.branch.name=${GITHUB_REF_NAME} \
             -Dsonar.sources=. \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.login=$SONAR_TOKEN
 
-  lint-security:
-    name: Terraform Lint + Security Scan
-    runs-on: ubuntu-latest
-    needs: sonarcloud
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install TFLint
-        run: |
-          curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
-      - name: Run TFLint
-        working-directory: env/dev
-        run: tflint --init && tflint
-      - name: Run Checkov
-        uses: bridgecrewio/checkov-action@v12
-        with:
-          directory: env/dev
-          framework: terraform
-          quiet: true
-          soft_fail: false
-          config_file: .checkov.yml
-
   create-pr:
-    name: Auto Create PR into main
+    name: Create Pull Request into Main
     runs-on: ubuntu-latest
-    needs: lint-security
-    if: github.ref != 'refs/heads/main'
+    needs: [tflint, checkov, sonarcloud]
+    if: github.ref == 'refs/heads/dev'
     steps:
       - uses: actions/checkout@v4
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: auto-pr/dev-to-main
           base: main
-          branch: ${{ github.ref_name }}
-          title: "Auto PR from ${{ github.ref_name }}"
-          body: "This PR was auto-generated after passing scans."
+          title: "Auto PR: Merge dev into main"
+          body: "This PR was automatically created after passing scans (TFLint, Checkov, SonarCloud)."
+          labels: auto-pr
 
   terraform-plan:
     name: Terraform Plan
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
     needs: create-pr
+    if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
       - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@v2
         with:
-          terraform_version: 1.6.6
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+          terraform_version: 1.8.5
       - name: Terraform Init
-        working-directory: env/dev
-        run: terraform init -input=false
+        run: terraform init
       - name: Terraform Plan
-        working-directory: env/dev
         run: terraform plan -out=tfplan
-      - name: Upload Terraform Plan
-        uses: actions/upload-artifact@v4
-        with:
-          name: tfplan
-          path: env/dev/tfplan
 
   terraform-apply:
     name: Terraform Apply
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    needs: terraform-plan
     steps:
       - uses: actions/checkout@v4
       - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@v2
         with:
-          terraform_version: 1.6.6
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+          terraform_version: 1.8.5
       - name: Terraform Init
-        working-directory: env/dev
-        run: terraform init -input=false
+        run: terraform init
       - name: Terraform Apply
-        working-directory: env/dev
-        run: terraform apply --auto-approve
+        run: terraform apply -auto-approve
 
-  terraform-destroy:
-    name: Destroy Infra (Manual Only)
+  terraform-manual:
+    name: Manual Terraform Action
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v4
       - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@v2
         with:
-          terraform_version: 1.6.6
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+          terraform_version: 1.8.5
       - name: Terraform Init
-        working-directory: env/dev
-        run: terraform init -input=false
-      - name: Terraform Destroy
-        working-directory: env/dev
-        run: terraform destroy --auto-approve
+        run: terraform init
+      - name: Run Terraform Action
+        run: |
+          if [ "${{ github.event.inputs.terraform_action }}" == "plan" ]; then
+            terraform plan
+          elif [ "${{ github.event.inputs.terraform_action }}" == "apply" ]; then
+            terraform apply -auto-approve
+          elif [ "${{ github.event.inputs.terraform_action }}" == "destroy" ]; then
+            terraform destroy -auto-approve
+          fi
