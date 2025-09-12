@@ -3,41 +3,54 @@ name: Terraform CI/CD Pipeline
 on:
   push:
     branches-ignore:
-      - main   # only run scans on feature branches
+      - main   # run scans only on feature branches
   pull_request:
     branches:
-      - main   # run terraform plan on PRs into main
-  workflow_dispatch: # allow manual destroy
+      - main   # run plan on PR to main
+  workflow_dispatch: # manual trigger (destroy, etc.)
 
 env:
+  TF_VAR_management_account_id: ${{ secrets.AWS_MANAGEMENT_ACCOUNT_ID }}
+  TF_VAR_dev_account_id: ${{ secrets.AWS_DEV_ACCOUNT_ID }}
   AWS_REGION: us-east-1
   SONAR_PROJECT_KEY: dainmusty_MULTI-VPC-INTER-REGION-TGW
   SONAR_ORGANIZATION: effulgencetech
-  TF_VAR_management_account_id: ${{ secrets.AWS_MANAGEMENT_ACCOUNT_ID }}
-  TF_VAR_dev_account_id: ${{ secrets.AWS_DEV_ACCOUNT_ID }}
 
 jobs:
-  scans:
-    name: Lint + Security + Sonar
+  sonarcloud:
+    name: Run SonarCloud Code Quality Scan
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Run SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@v2
-        with:
-          projectKey: ${{ env.SONAR_PROJECT_KEY }}
-          organization: ${{ env.SONAR_ORGANIZATION }}
+      - name: Install SonarCloud Scanner
+        run: |
+          curl -sSLo sonar-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-linux.zip
+          unzip -q sonar-scanner.zip
+          echo "$PWD/sonar-scanner-5.0.1.3006-linux/bin" >> $GITHUB_PATH
+      - name: SonarCloud Scan
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          sonar-scanner \
+            -Dsonar.projectKey=${{ env.SONAR_PROJECT_KEY }} \
+            -Dsonar.organization=${{ env.SONAR_ORGANIZATION }} \
+            -Dsonar.branch.name=${GITHUB_REF_NAME} \
+            -Dsonar.sources=. \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.login=$SONAR_TOKEN
 
+  lint-security:
+    name: Terraform Lint + Security Scan
+    runs-on: ubuntu-latest
+    needs: sonarcloud
+    steps:
+      - uses: actions/checkout@v4
       - name: Install TFLint
         run: |
           curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
       - name: Run TFLint
         working-directory: env/dev
         run: tflint --init && tflint
-
       - name: Run Checkov
         uses: bridgecrewio/checkov-action@v12
         with:
@@ -47,27 +60,35 @@ jobs:
           soft_fail: false
           config_file: .checkov.yml
 
-      # optional: auto-create PR to main if on feature branch
-      - name: Create Pull Request
-        if: github.ref != 'refs/heads/main'
-        uses: peter-evans/create-pull-request@v6
-        with:
-          branch: ${{ github.ref_name }}
-          base: main
-          title: "Terraform changes from ${{ github.ref_name }}"
-          body: "This PR contains Terraform changes scanned and ready for review."
-
-  terraform-plan:
-    name: Terraform Plan (on PR)
+  create-pr:
+    name: Auto Create PR into main
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    needs: scans
+    needs: lint-security
+    if: github.ref != 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          base: main
+          branch: ${{ github.ref_name }}
+          title: "Auto PR from ${{ github.ref_name }}"
+          body: "This PR was auto-generated after passing scans."
+
+  terraform-plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    needs: create-pr
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.6.6
-      - uses: aws-actions/configure-aws-credentials@v4
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -78,18 +99,25 @@ jobs:
       - name: Terraform Plan
         working-directory: env/dev
         run: terraform plan -out=tfplan
+      - name: Upload Terraform Plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: env/dev/tfplan
 
   terraform-apply:
-    name: Terraform Apply (on merge)
+    name: Terraform Apply
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    needs: scans
+    needs: terraform-plan
     steps:
       - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.6.6
-      - uses: aws-actions/configure-aws-credentials@v4
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -107,10 +135,12 @@ jobs:
     if: github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.6.6
-      - uses: aws-actions/configure-aws-credentials@v4
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
