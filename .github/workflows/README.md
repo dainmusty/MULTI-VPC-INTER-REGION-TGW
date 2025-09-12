@@ -1,3 +1,79 @@
+# Github commands
+yes and walk me through creating a feature branch called dev, switch to dev because am currently working in main. that is the only branch i have. so we can test the entire workflow
+ChatGPT said:
+
+Perfect 🚀 let’s do this step by step. Right now you only have main, so we’ll create a new feature branch called dev, switch to it, and push it to GitHub. That way your workflow can kick in with the scans → PR → plan → apply pipeline.
+
+1. Make sure your repo is clean
+git status
+
+
+If you have changes, either commit them or stash them:
+
+git add .
+git commit -m "save work before branching"
+
+2. Create and switch to the dev branch
+git checkout -b dev
+
+
+This does two things:
+
+Creates a new branch named dev
+
+Switches you onto it
+
+Confirm:
+
+git branch
+
+
+👉 You should see:
+
+* dev
+  main
+
+3. Push the new branch to GitHub
+git push -u origin dev
+
+
+The -u sets the upstream so that future git push and git pull commands will default to the dev branch.
+
+4. Make a small change to trigger the workflow
+
+Since your workflow runs scans only on non-main branches, let’s edit any .tf file or even just add a comment line. Example:
+
+# test trigger for workflow
+
+
+Commit & push:
+
+git add .
+git commit -m "test: trigger workflow from dev branch"
+git push
+
+5. Watch GitHub Actions
+
+Go to your repo → Actions tab → you should see:
+
+SonarCloud scan
+
+TFLint
+
+Checkov
+
+Then create-pr job → automatically opening a PR from dev → main.
+
+6. Approve PR → Terraform plan
+
+Once the PR exists, GitHub will trigger terraform-plan. You’ll see the plan as an artifact/review item in the PR.
+
+7. Merge PR → Terraform apply
+
+After you approve and merge into main, the workflow will detect the push to main and run terraform-apply.
+
+
+
 Best Practice CI/CD Flow (for Terraform + security)
 
 Push to feature branch → Run Sonar + Lint + Checkov only (no Terraform).
