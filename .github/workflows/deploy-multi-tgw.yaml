@@ -52,11 +52,23 @@ jobs:
       - name: Check Terraform changes
         id: tf_changes
         run: |
-          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E '\.tf$'; then
+          # Get list of changed files depending on event type
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+          git fetch origin ${{ github.base_ref }} --depth=1
+          CHANGED_FILES=$(git diff --name-only FETCH_HEAD ${{ github.sha }})
+          else
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
+          fi
+
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          if echo "$CHANGED_FILES" | grep -E '\.tf$'; then
             echo "terraform_changed=true" >> $GITHUB_ENV
           else
             echo "terraform_changed=false" >> $GITHUB_ENV
           fi
+
 
       # Run TFLint only if *.tf changed
       - name: Run TFLint
