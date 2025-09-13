@@ -274,3 +274,26 @@ In your case, since you’re only deploying VPCs, TGWs, and logs, you don’t ne
 Start with the vpc_flow_logs role using the permission boundary.
 
 Later, when you add app/service roles, decide whether to enforce boundaries org-wide.
+
+
+# oidc terraform role; use this for more security
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::<ACCOUNT_ID>:oidc-provider/token.actions.githubusercontent.com"
+      },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringLike": {
+          "token.actions.githubusercontent.com:sub": [
+            "repo:dainmusty/MULTI-VPC-INTER-REGION-TGW:ref:refs/heads/main",
+            "repo:dainmusty/MULTI-VPC-INTER-REGION-TGW:ref:refs/heads/dev"
+          ]
+        }
+      }
+    }
+  ]
+}

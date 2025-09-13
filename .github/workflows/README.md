@@ -620,3 +620,564 @@ You might need id-token: write if you want to switch from AWS secrets to OIDC.
 You don’t need packages: write, unless you plan to push artifacts to GitHub Packages.
 
 Do you want me to show you how to replace AWS secrets with OIDC and id-token: write so your workflow runs without storing AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY?
+
+
+# brightain's workflow with oidc and terragrunt
+
+name: Deploy-primary-cloudguru-shared-Network(INT)
+on:
+  push:
+    branches:
+      - main # Run on push to the main branch
+      - "*" # Run on push to any feature branch
+    paths:
+      - ".github/workflows/deploy-primary-cloudguru-shared.yaml"
+      - "Terraform/deployments/CloudG/Shared-account/primary/**/*"
+  workflow_dispatch:
+    inputs:
+      terragrunt_action:
+        description: "Select the terragrunt action to perform"
+        required: true
+        type: choice
+        options:
+          - "plan"
+          - "apply"
+          - "destroy"
+      skip_nochange:
+        description: "Apply even if no change is reported in the plan"
+        required: false
+        type: boolean
+
+env:
+  IAM_ROLE: arn:aws:iam::586794444719:role/cloudguru-OIDCGitHubRole-role
+  REGION: us-east-1
+  DEPLOYMENT_PATH: Terraform/deployments/CloudG/Shared-account/primary
+  TF_VAR_ANSIBLE_TOWER_USERNAME: ${{ secrets.TF_VAR_ANSIBLE_USERNAME }}
+  TF_VAR_ANSIBLE_TOWER_PASSWORD: ${{ secrets.TF_VAR_ANSIBLE_PASSWORD }}
+  TF_VAR_USER_USERNAME1: ${{ secrets.TF_VAR_USER_USERNAME1 }}
+  TF_VAR_USER_PASSWORD1: ${{ secrets.TF_VAR_USER_PASSWORD1 }}
+  TF_VAR_USER_USERNAME2: ${{ secrets.TF_VAR_USER_USERNAME2 }}
+  TF_VAR_USER_PASSWORD2: ${{ secrets.TF_VAR_USER_PASSWORD2 }}
+
+permissions:
+  packages: write
+  contents: read
+  id-token: write
+
+jobs:
+  Plan:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest]
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ env.DEPLOYMENT_PATH }}
+    steps:
+      - name: Clone the repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1.7.0
+        with:
+          role-to-assume: ${{ env.IAM_ROLE }}
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC
+          aws-region: ${{ env.REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-Terraform@v1
+        with:
+          terraform_version: 1.11.1
+          terraform_wrapper: false
+
+      - name: Verify Terraform version
+        run: terraform --version
+
+      - name: Setup Terraform wrapper path
+        run: which terraform
+
+      - name: Setup Terragrunt
+        run: |
+          sudo wget -q -O /bin/terragrunt "https://github.com/gruntwork-io/terragrunt/releases/download/v0.75.0/terragrunt_linux_amd64"
+          sudo chmod +x /bin/terragrunt
+
+      - name: Initialiize Terragrunt
+        id: init
+        run: terragrunt init
+
+      - name: Plan Terragrunt
+        id: plan
+        run: terragrunt run-all plan --terragrunt-non-interactive
+
+  Approve:
+    needs: Plan
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.terragrunt_action == 'apply' && github.ref == 'refs/heads/main'
+    environment: # This is what allows environment secrets to work instead of repository secrets
+      name: production
+    steps:
+      - name: Awaiting approval before applying changes
+        run: echo "Waiting for manual approval to apply changes."
+
+  Apply:
+    needs: Approve
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.terragrunt_action == 'apply' && github.ref == 'refs/heads/main'
+    environment:
+      name: production
+    env:
+      IAM_ROLE: arn:aws:iam::586794444719:role/cloudguru-OIDCGitHubRole-role
+      REGION: us-east-1
+      DEPLOYMENT_PATH: Terraform/deployments/INT/Shared-account/primary
+
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Clone the repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1.7.0
+        with:
+          role-to-assume: ${{ env.IAM_ROLE }}
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC
+          aws-region: ${{ env.REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-Terraform@v1
+        with:
+          terraform_version: 1.11.1
+          terraform_wrapper: false
+
+      - name: Verify Terraform version
+        run: terraform --version
+
+      - name: Setup Terraform wrapper path
+        run: which terraform
+
+      - name: Setup Terragrunt
+        run: |
+          sudo wget -q -O /bin/terragrunt "https://github.com/gruntwork-io/terragrunt/releases/download/v0.75.0/terragrunt_linux_amd64"
+          sudo chmod +x /bin/terragrunt
+
+      - name: Apply Terragrunt
+        working-directory: ${{ env.DEPLOYMENT_PATH }}
+        run: terragrunt run-all apply --terragrunt-non-interactive
+
+  Destroy:
+    needs: Plan
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.terragrunt_action == 'destroy' && github.ref == 'refs/heads/main'
+    env:
+      IAM_ROLE: arn:aws:iam::586794444719:role/cloudguru-OIDCGitHubRole-role
+      REGION: us-east-1
+      DEPLOYMENT_PATH: Terraform/deployments/INT/Shared-account/primary
+    steps:
+      - name: Clone the repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1.7.0
+        with:
+          role-to-assume: ${{ env.IAM_ROLE }}
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC
+          aws-region: ${{ env.REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-Terraform@v1
+        with:
+          terraform_version: 1.11.1
+          terraform_wrapper: false
+
+      - name: Verify Terraform version
+        run: terraform --version
+
+      - name: Setup Terraform wrapper path
+        run: which terraform
+
+      - name: Setup Terragrunt
+        run: |
+          sudo wget -q -O /bin/terragrunt "https://github.com/gruntwork-io/terragrunt/releases/download/v0.75.0/terragrunt_linux_amd64"
+          sudo chmod +x /bin/terragrunt
+
+      - name: Destroy Terragrunt
+        working-directory: ${{ env.DEPLOYMENT_PATH }}
+        run: terragrunt run-all destroy --terragrunt-non-interactive
+
+# mine earlier with access keys
+name: Terraform CI/CD
+
+on:
+  push:
+    branches:
+      - "dev"     # feature branch for testing
+  pull_request:
+    branches:
+      - "main"    # PRs target main
+  workflow_dispatch:
+    inputs:
+      terraform_action:
+        description: "Select the Terraform action to perform"
+        required: true
+        type: choice
+        options:
+          - "plan"
+          - "apply"
+          - "destroy"
+      skip_nochange:
+        description: "Apply even if no change is reported in the plan"
+        required: false
+        type: boolean
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  TF_VAR_management_account_id: ${{ secrets.AWS_MANAGEMENT_ACCOUNT_ID }}
+  TF_VAR_dev_account_id: ${{ secrets.AWS_DEV_ACCOUNT_ID }}
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  SONAR_PROJECT_KEY: dainmusty_MULTI-VPC-INTER-REGION-TGW
+  SONAR_ORGANIZATION: effulgencetech
+
+jobs:
+  tflint:
+    name: Run TFLint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install TFLint
+        run: |
+          curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+      - name: Run TFLint
+        run: tflint
+
+  checkov:
+    name: Run Checkov
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Checkov Scan
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: .
+          quiet: true
+          soft_fail: false
+
+  sonarcloud:
+    name: Run SonarCloud Code Quality Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install SonarCloud Scanner
+        run: |
+          curl -sSLo sonar-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-linux.zip
+          unzip -q sonar-scanner.zip
+          echo "$PWD/sonar-scanner-5.0.1.3006-linux/bin" >> $GITHUB_PATH
+      - name: SonarCloud Scan
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          sonar-scanner \
+            -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+            -Dsonar.organization=${SONAR_ORGANIZATION} \
+            -Dsonar.branch.name=${GITHUB_REF_NAME} \
+            -Dsonar.sources=. \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.login=$SONAR_TOKEN
+
+  create-pr:
+    name: Create Pull Request into Main
+    runs-on: ubuntu-latest
+    needs: [tflint, checkov, sonarcloud]
+    if: github.ref == 'refs/heads/dev'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: auto-pr/dev-to-main
+          base: main
+          title: "Auto PR: Merge dev into main"
+          body: "This PR was automatically created after passing scans (TFLint, Checkov, SonarCloud)."
+          labels: auto-pr
+
+  terraform-plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+    needs: create-pr
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.8.5
+
+      - name: Terraform Init
+        working-directory: env/dev
+        run: terraform init -input=false
+
+      - name: Terraform Plan
+        working-directory: env/dev
+        run: terraform plan -out=tfplan
+
+  terraform-apply:
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.8.5
+
+      - name: Terraform Init
+        working-directory: env/dev
+        run: terraform init -input=false
+
+      - name: Terraform Apply
+        working-directory: env/dev
+        run: terraform apply -auto-approve
+
+  terraform-manual:
+    name: Manual Terraform Action
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.8.5
+
+      - name: Terraform Init
+        working-directory: env/dev
+        run: terraform init -input=false
+
+      - name: Run Terraform Action
+        working-directory: env/dev
+        run: |
+          if [ "${{ github.event.inputs.terraform_action }}" == "plan" ]; then
+            terraform plan
+          elif [ "${{ github.event.inputs.terraform_action }}" == "apply" ]; then
+            terraform apply -auto-approve
+          elif [ "${{ github.event.inputs.terraform_action }}" == "destroy" ]; then
+            terraform destroy -auto-approve
+          fi
+
+# mine with oidc role
+name: Terraform CI/CD
+
+on:
+  push:
+    branches:
+      - "dev"     # feature branch for testing
+  pull_request:
+    branches:
+      - "main"    # PRs target main
+  workflow_dispatch:
+    inputs:
+      terraform_action:
+        description: "Select the Terraform action to perform"
+        required: true
+        type: choice
+        options:
+          - "plan"
+          - "apply"
+          - "destroy"
+      skip_nochange:
+        description: "Apply even if no change is reported in the plan"
+        required: false
+        type: boolean
+
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write   # required for OIDC role assumption
+
+env:
+  TF_VAR_management_account_id: ${{ secrets.AWS_MANAGEMENT_ACCOUNT_ID }}
+  TF_VAR_dev_account_id: ${{ secrets.AWS_DEV_ACCOUNT_ID }}
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  SONAR_PROJECT_KEY: dainmusty_MULTI-VPC-INTER-REGION-TGW
+  SONAR_ORGANIZATION: effulgencetech
+
+jobs:
+  tflint:
+    name: Run TFLint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install TFLint
+        run: |
+          curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+      - name: Run TFLint
+        run: tflint
+
+  checkov:
+    name: Run Checkov
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Checkov Scan
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: .
+          quiet: true
+          soft_fail: false
+
+  sonarcloud:
+    name: Run SonarCloud Code Quality Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install SonarCloud Scanner
+        run: |
+          curl -sSLo sonar-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-linux.zip
+          unzip -q sonar-scanner.zip
+          echo "$PWD/sonar-scanner-5.0.1.3006-linux/bin" >> $GITHUB_PATH
+      - name: SonarCloud Scan
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          sonar-scanner \
+            -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+            -Dsonar.organization=${SONAR_ORGANIZATION} \
+            -Dsonar.branch.name=${GITHUB_REF_NAME} \
+            -Dsonar.sources=. \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.login=$SONAR_TOKEN
+
+  create-pr:
+    name: Create Pull Request into Main
+    runs-on: ubuntu-latest
+    needs: [tflint, checkov, sonarcloud]
+    if: github.ref == 'refs/heads/dev'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: auto-pr/dev-to-main
+          base: main
+          title: "Auto PR: Merge dev into main"
+          body: "This PR was automatically created after passing scans (TFLint, Checkov, SonarCloud)."
+          labels: auto-pr
+
+  terraform-plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+    needs: create-pr
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.8.5
+
+      - name: Terraform Init
+        working-directory: env/dev
+        run: terraform init -input=false
+
+      - name: Terraform Plan
+        working-directory: env/dev
+        run: terraform plan -out=tfplan
+
+  terraform-apply:
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.8.5
+
+      - name: Terraform Init
+        working-directory: env/dev
+        run: terraform init -input=false
+
+      - name: Terraform Apply
+        working-directory: env/dev
+        run: terraform apply -auto-approve
+
+  terraform-manual:
+    name: Manual Terraform Action
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.8.5
+
+      - name: Terraform Init
+        working-directory: env/dev
+        run: terraform init -input=false
+
+      - name: Run Terraform Action
+        working-directory: env/dev
+        run: |
+          if [ "${{ github.event.inputs.terraform_action }}" == "plan" ]; then
+            terraform plan
+          elif [ "${{ github.event.inputs.terraform_action }}" == "apply" ]; then
+            terraform apply -auto-approve
+          elif [ "${{ github.event.inputs.terraform_action }}" == "destroy" ]; then
+            terraform destroy -auto-approve
+          fi
