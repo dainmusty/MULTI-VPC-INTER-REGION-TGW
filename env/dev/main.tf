@@ -4,39 +4,39 @@
 # Ohio VPCs
 # -----------------------
 module "ohio_vpcs" {
-  source    = "../../modules/vpc"
-  providers = { 
+  source = "../../modules/vpc"
+  providers = {
     aws = aws.dev_us_east_2
   }
 
   vpcs = {
     vpc1 = {
-      cidr_block           = "10.1.0.0/16"   
+      cidr_block           = "10.1.0.0/16"
       azs                  = ["us-east-2a", "us-east-2b"]
       public_subnet_cidrs  = ["10.1.1.0/24", "10.1.2.0/24"]
       private_subnet_cidrs = ["10.1.101.0/24", "10.1.102.0/24"]
 
       # 🔽 Flow logs config
-      enable_flow_logs           = true       # Enable VPC flow logs
-      flow_logs_destination_type = "s3"       # change to "cloud-watch-logs" if using CloudWatch Logs
+      enable_flow_logs           = true # Enable VPC flow logs
+      flow_logs_destination_type = "s3" # change to "cloud-watch-logs" if using CloudWatch Logs
       flow_logs_destination_arn  = module.s3.log_bucket_arn
-      flow_logs_traffic_type     = "ALL"        # ACCEPT → capture only accepted traffic. # REJECT → capture only rejected traffic. ALL → capture all traffic.
-      vpc_flow_log_iam_role_arn  = null       # Provide iam role if using CloudWatch Logs
-      env = "dev"
+      flow_logs_traffic_type     = "ALL" # ACCEPT → capture only accepted traffic. # REJECT → capture only rejected traffic. ALL → capture all traffic.
+      vpc_flow_log_iam_role_arn  = null  # Provide iam role if using CloudWatch Logs
+      env                        = "dev"
     }
     vpc2 = {
-      cidr_block           = "10.2.0.0/16"   
+      cidr_block           = "10.2.0.0/16"
       azs                  = ["us-east-2a", "us-east-2b"]
       public_subnet_cidrs  = ["10.2.1.0/24", "10.2.2.0/24"]
       private_subnet_cidrs = ["10.2.101.0/24", "10.2.102.0/24"]
 
       # 🔽 Flow logs config
-      enable_flow_logs           = true       # Enable VPC flow logs
-      flow_logs_destination_type = "s3"      # change to "cloud-watch-logs" if using CloudWatch Logs  
+      enable_flow_logs           = true # Enable VPC flow logs
+      flow_logs_destination_type = "s3" # change to "cloud-watch-logs" if using CloudWatch Logs  
       flow_logs_destination_arn  = module.s3.log_bucket_arn
-      flow_logs_traffic_type     = "ALL"      # ACCEPT → capture only accepted traffic. # REJECT → capture only rejected traffic. ALL → capture all traffic.
+      flow_logs_traffic_type     = "ALL" # ACCEPT → capture only accepted traffic. # REJECT → capture only rejected traffic. ALL → capture all traffic.
       vpc_flow_log_iam_role_arn  = null
-      env = "dev"
+      env                        = "dev"
 
 
     }
@@ -61,32 +61,32 @@ module "virginia_vpcs" {
 
   vpcs = {
     vpc3 = {
-      cidr_block          = "10.3.0.0/16"   
-      azs                 = ["us-east-1a", "us-east-1b"]
-      public_subnet_cidrs = ["10.3.1.0/24", "10.3.2.0/24"]
-      private_subnet_cidrs= ["10.3.101.0/24", "10.3.102.0/24"]
+      cidr_block           = "10.3.0.0/16"
+      azs                  = ["us-east-1a", "us-east-1b"]
+      public_subnet_cidrs  = ["10.3.1.0/24", "10.3.2.0/24"]
+      private_subnet_cidrs = ["10.3.101.0/24", "10.3.102.0/24"]
 
       # 🔽 Flow logs config
-      enable_flow_logs           = true       # Enable VPC flow logs
-      flow_logs_destination_type = "s3"      # change to "cloud-watch-logs" if using CloudWatch Logs
+      enable_flow_logs           = true # Enable VPC flow logs
+      flow_logs_destination_type = "s3" # change to "cloud-watch-logs" if using CloudWatch Logs
       flow_logs_destination_arn  = module.s3.log_bucket_arn
-      flow_logs_traffic_type     = "ALL"      # ACCEPT → capture only accepted traffic. # REJECT → capture only rejected traffic. ALL → capture all traffic.
-      vpc_flow_log_iam_role_arn  = null       # Provide iam role if using CloudWatch Logs. You need call the iam child module before referencing the role arn here.
-      env = "dev"
+      flow_logs_traffic_type     = "ALL" # ACCEPT → capture only accepted traffic. # REJECT → capture only rejected traffic. ALL → capture all traffic.
+      vpc_flow_log_iam_role_arn  = null  # Provide iam role if using CloudWatch Logs. You need call the iam child module before referencing the role arn here.
+      env                        = "dev"
     }
     vpc4 = {
-      cidr_block          = "10.4.0.0/16"   
-      azs                 = ["us-east-1a", "us-east-1b"]
-      public_subnet_cidrs = ["10.4.1.0/24", "10.4.2.0/24"]
-      private_subnet_cidrs= ["10.4.101.0/24", "10.4.102.0/24"]
+      cidr_block           = "10.4.0.0/16"
+      azs                  = ["us-east-1a", "us-east-1b"]
+      public_subnet_cidrs  = ["10.4.1.0/24", "10.4.2.0/24"]
+      private_subnet_cidrs = ["10.4.101.0/24", "10.4.102.0/24"]
 
       # 🔽 Flow logs config
-      enable_flow_logs           = true       # Enable VPC flow logs
-      flow_logs_destination_type = "s3"      # change to "cloud-watch-logs" if using CloudWatch Logs
+      enable_flow_logs           = true # Enable VPC flow logs
+      flow_logs_destination_type = "s3" # change to "cloud-watch-logs" if using CloudWatch Logs
       flow_logs_destination_arn  = module.s3.log_bucket_arn
-      flow_logs_traffic_type     = "ALL"      # "ACCEPT" → capture only accepted traffic. # "REJECT" → capture only rejected traffic. "ALL" → capture all traffic.
-      vpc_flow_log_iam_role_arn  = null       # Replace null with "module.iam.vpc_flow_log_role_arn" if using CloudWatch Logs. You need call the iam child module before referencing the role arn here.
-      env = "dev"
+      flow_logs_traffic_type     = "ALL" # "ACCEPT" → capture only accepted traffic. # "REJECT" → capture only rejected traffic. "ALL" → capture all traffic.
+      vpc_flow_log_iam_role_arn  = null  # Replace null with "module.iam.vpc_flow_log_role_arn" if using CloudWatch Logs. You need call the iam child module before referencing the role arn here.
+      env                        = "dev"
 
 
     }
@@ -101,23 +101,23 @@ module "virginia_vpcs" {
 
 # # S3 Module
 module "s3" {
-  source                          = "../../modules/s3"
-  
-  log_bucket_name                      = "tankofm-dev-log-bucket"
+  source = "../../modules/s3"
+
+  log_bucket_name              = "tankofm-dev-log-bucket"
   log_bucket_versioning_status = "Enabled"
-  ResourcePrefix                  = "Tankofm-Dev"
- 
+  ResourcePrefix               = "Tankofm-Dev"
+
 
 }
 
 
 # IAM Module
 module "iam" {
-  source = "../../modules/iam"
-  env = "dev"
-  company_name = "tankofm"
+  source          = "../../modules/iam"
+  env             = "dev"
+  company_name    = "tankofm"
   log_bucket_name = module.s3.log_bucket_name
-  
+
 }
 
 
@@ -128,8 +128,8 @@ module "tgw_ohio" {
   source    = "../../modules/tgw"
   providers = { aws = aws.dev_us_east_2 }
 
-  project          = "tankofm-inter-region-vpc-project"
-  tgw_name         = "tgw_ohio"
+  project           = "tankofm-inter-region-vpc-project"
+  tgw_name          = "tgw_ohio"
   route_table_names = ["prod", "dev"]
 
   amazon_side_asn                 = 64512
@@ -165,8 +165,8 @@ module "tgw_virginia" {
   source    = "../../modules/tgw"
   providers = { aws = aws.dev_us_east_1 }
 
-  project          = "tankofm-inter-region-vpc-project"
-  tgw_name         = "tgw_virginia"
+  project           = "tankofm-inter-region-vpc-project"
+  tgw_name          = "tgw_virginia"
   route_table_names = ["prod", "dev"]
 
   amazon_side_asn                 = 64512
@@ -209,7 +209,7 @@ module "tgw_virginia" {
 
 #   requester_tgw_id = module.tgw_virginia.tgw_id
 #   requester_region = "us-east-1"
-  
+
 
 #   accepter_tgw_id  = module.tgw_ohio.tgw_id
 #   accepter_region  = "us-east-2"
@@ -243,7 +243,7 @@ module "tgw_virginia" {
 #     #   requester_tgw_id = module.tgw_virginia.tgw_id
 #     #   accepter_tgw_id  = module.tgw_ohio_secondary.tgw_id
 #     #   accepter_region  = "us-west-2"
-    
+
 #   }
 
 #   tags = {
@@ -269,8 +269,8 @@ module "tgw_peering_virginia_ohio" {
       accepter_region  = "us-east-2"
       requester_rt_id  = module.tgw_virginia.tgw_route_table_id
       accepter_rt_id   = module.tgw_ohio.tgw_route_table_id
-      requester_routes = values(module.ohio_vpcs.vpc_cidrs)      # from Ohio VPC outputs
-      accepter_routes  = values(module.virginia_vpcs.vpc_cidrs)  # from Virginia VPC outputs
+      requester_routes = values(module.ohio_vpcs.vpc_cidrs)     # from Ohio VPC outputs
+      accepter_routes  = values(module.virginia_vpcs.vpc_cidrs) # from Virginia VPC outputs
     }
   }
 
@@ -336,7 +336,7 @@ module "ram_share_accept_virginia" {
     aws = aws.mgmt_us_east_1
   }
 
-  share_arns = [module.tgw_ram_share_virginia.share_arn]
+  share_arns   = [module.tgw_ram_share_virginia.share_arn]
   accept_share = true
 }
 
@@ -347,6 +347,6 @@ module "ram_share_accept_ohio" {
     aws = aws.mgmt_us_east_2
   }
 
-  share_arns = [module.tgw_ram_share_ohio.share_arn]
+  share_arns   = [module.tgw_ram_share_ohio.share_arn]
   accept_share = true
 }

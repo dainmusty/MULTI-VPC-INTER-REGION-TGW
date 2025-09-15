@@ -7,5 +7,5 @@ output "permission_boundary_arn" {
 output "vpc_flow_log_role_arn" {
   description = "ARN of the VPC Flow Log Role"
   value       = aws_iam_role.vpc_flow_logs.arn
-  
+
 }

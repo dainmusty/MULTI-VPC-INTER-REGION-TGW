@@ -217,3 +217,23 @@ provider "aws" {
 If all accounts are the same → Option 1 (simplest).
 
 If different accounts (mgmt/dev/prod) → Option 2 with assume_role (best practice, fewer secrets to manage).
+
+
+2. Missing provider version constraint
+
+TFLint flags resources where you’re using aws_* without defining required_providers.
+
+Fix by adding inside your terraform block:
+
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = ">= 5.0.0"
+    }
+  }
+}
+
+
+👉 Do this in the root module and each child module where provider resources are declared.
+This ensures your modules are always pinned to a compatible provider version.

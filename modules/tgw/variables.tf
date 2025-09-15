@@ -2,29 +2,29 @@
 variable "project" { type = string }
 variable "tgw_name" { type = string } # e.g., "tgw_ohio"
 variable "route_table_names" {
-  type        = list(string)
-  default     = ["prod","dev"]
+  type    = list(string)
+  default = ["prod", "dev"]
 }
 
-variable "amazon_side_asn"                 { 
-  type = number  
+variable "amazon_side_asn" {
+  type    = number
   default = 64512
-   }
-variable "default_route_table_association"  { 
-  type = string  
-  default = "disable" 
 }
-variable "default_route_table_propagation"  { 
-  type = string  
-  default = "disable" 
+variable "default_route_table_association" {
+  type    = string
+  default = "disable"
 }
-variable "dns_support"                      { 
-  type = string  
-  default = "enable" 
+variable "default_route_table_propagation" {
+  type    = string
+  default = "disable"
 }
-variable "vpn_ecmp_support"                 { 
-  type = string  
-  default = "enable" 
+variable "dns_support" {
+  type    = string
+  default = "enable"
+}
+variable "vpn_ecmp_support" {
+  type    = string
+  default = "enable"
 }
 
 variable "attachments" {

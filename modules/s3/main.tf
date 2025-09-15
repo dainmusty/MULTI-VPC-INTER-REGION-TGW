@@ -2,9 +2,9 @@
 # sonarignore: S3_LOGGING_ACL
 resource "aws_s3_bucket" "log_bucket" {
   bucket = var.log_bucket_name
-  
+
   tags = {
-    Name        = "${var.ResourcePrefix}-s3-log-bucket"
+    Name = "${var.ResourcePrefix}-s3-log-bucket"
 
   }
 }
@@ -64,12 +64,12 @@ resource "aws_s3_bucket_policy" "https_only" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid      = "DenyInsecureTransport"
-        Effect   = "Deny"
+        Sid       = "DenyInsecureTransport"
+        Effect    = "Deny"
         Principal = "*"
-        Action   = "s3:*"
+        Action    = "s3:*"
         Resource = [
-          "${aws_s3_bucket.log_bucket.arn}",
+          aws_s3_bucket.log_bucket.arn,
           "${aws_s3_bucket.log_bucket.arn}/*"
         ]
         Condition = {

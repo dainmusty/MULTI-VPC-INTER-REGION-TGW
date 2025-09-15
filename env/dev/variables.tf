@@ -6,5 +6,5 @@ variable "management_account_id" {
 variable "dev_account_id" {
   description = "AWS Dev Account ID"
   type        = string
-  
+
 }
