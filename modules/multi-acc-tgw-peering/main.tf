@@ -33,9 +33,9 @@ resource "aws_ec2_transit_gateway_peering_attachment_accepter" "tgw_peering_acce
 resource "aws_ec2_transit_gateway_route" "requester_routes" {
   for_each = {
     for key, peering in var.peerings : "${key}-req" => {
-      rt_id       = peering.requester_rt_id
-      routes      = peering.requester_routes
-      attach_id   = aws_ec2_transit_gateway_peering_attachment.tgw_peering_attach[key].id
+      rt_id     = peering.requester_rt_id
+      routes    = peering.requester_routes
+      attach_id = aws_ec2_transit_gateway_peering_attachment.tgw_peering_attach[key].id
     }
     if length(peering.requester_routes) > 0
   }
@@ -52,9 +52,9 @@ resource "aws_ec2_transit_gateway_route" "requester_routes" {
 resource "aws_ec2_transit_gateway_route" "accepter_routes" {
   for_each = {
     for key, peering in var.peerings : "${key}-acc" => {
-      rt_id       = peering.accepter_rt_id
-      routes      = peering.accepter_routes
-      attach_id   = aws_ec2_transit_gateway_peering_attachment_accepter.tgw_peering_accept[key].id
+      rt_id     = peering.accepter_rt_id
+      routes    = peering.accepter_routes
+      attach_id = aws_ec2_transit_gateway_peering_attachment_accepter.tgw_peering_accept[key].id
     }
     if length(peering.accepter_routes) > 0
   }

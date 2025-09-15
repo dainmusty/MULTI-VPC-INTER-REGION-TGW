@@ -1,8 +1,8 @@
 # Named TGW route tables (e.g., prod/dev)
 resource "aws_ec2_transit_gateway_route_table" "tgw_rt" {
-  for_each          = toset(var.route_table_names)
+  for_each           = toset(var.route_table_names)
   transit_gateway_id = aws_ec2_transit_gateway.multi_tgw.id
-  tags = merge(var.tags, { Name = "${var.project}-${var.tgw_name}-rt-${each.key}" })
+  tags               = merge(var.tags, { Name = "${var.project}-${var.tgw_name}-rt-${each.key}" })
 }
 
 # Associate each attachment to chosen TGW RT (if specified)

@@ -1,4 +1,4 @@
- 
+
 # VPC
 # -------------------
 resource "aws_vpc" "vpc" {
@@ -91,7 +91,7 @@ resource "aws_internet_gateway" "igw" {
 #     ]) : pair.key => pair
 #   }
 
-  
+
 
 #   tags = {
 #     Name = "${each.value.vpc_name}-eip-${each.value.az}"
@@ -211,11 +211,11 @@ resource "aws_default_security_group" "restrict_default" {
 
   # Explicitly deny all inbound traffic
   ingress {
-    protocol    = "-1"
-    from_port   = 0
-    to_port     = 0
-    self        = false
-    cidr_blocks = []
+    protocol         = "-1"
+    from_port        = 0
+    to_port          = 0
+    self             = false
+    cidr_blocks      = []
     ipv6_cidr_blocks = []
     prefix_list_ids  = []
     security_groups  = []
@@ -223,10 +223,10 @@ resource "aws_default_security_group" "restrict_default" {
 
   # Allow all outbound traffic (common default)
   egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    cidr_blocks      = ["0.0.0.0/0"]
     ipv6_cidr_blocks = ["::/0"]
   }
 

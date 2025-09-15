@@ -2,7 +2,7 @@
 resource "aws_iam_policy" "permission_boundary" {
   name        = "${var.company_name}-${var.env}-permission-boundary"
   description = "Permission boundary to restrict access for VPC Flow Logs (CloudWatch + S3)"
-  policy      = jsonencode({
+  policy = jsonencode({
     Version = "2012-10-17",
     Statement = [
       {
@@ -291,7 +291,7 @@ resource "aws_iam_role_policy" "vpc_flow_logs_policy" {
 #         ]
 #         Resource = "*"
 #       },
-      
+
 #       {
 #         Effect   = "Allow"
 #         Action   = [
@@ -459,7 +459,7 @@ resource "aws_iam_role_policy" "vpc_flow_logs_policy" {
 #           "secretsmanager:GetSecretValue"
 #         ],
 #         Resource = data.aws_secretsmanager_secret.grafana.arn
-  
+
 #       }
 #     ]
 #   })

@@ -1,19 +1,19 @@
 variable "env" {
   description = "Environment"
-  type = string
-  
+  type        = string
+
 }
 
 
 variable "company_name" {
   description = "Company that owns the Infrastructure"
-  type = string
-  
+  type        = string
+
 }
 
 variable "log_bucket_name" {
   description = "Bucket name"
-  type = string
+  type        = string
 }
 
 

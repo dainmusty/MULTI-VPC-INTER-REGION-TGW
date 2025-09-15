@@ -6,18 +6,18 @@ variable "tags" {
 
 variable "env" {
   description = "Environment"
-  type = string
-  default = "dev"
+  type        = string
+  default     = "dev"
 }
 
 
 variable "vpcs" {
   description = "Map of VPC configurations"
   type = map(object({
-    cidr_block            = string
-    azs                   = list(string)
-    public_subnet_cidrs   = list(string)
-    private_subnet_cidrs  = list(string)
+    cidr_block           = string
+    azs                  = list(string)
+    public_subnet_cidrs  = list(string)
+    private_subnet_cidrs = list(string)
 
     # 🔽 Flow logs
     enable_flow_logs           = optional(bool, false)
